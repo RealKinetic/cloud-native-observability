@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"github.com/opentracing-contrib/go-stdlib/nethttp"
-	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/realkinetic/cloud-native-meetup-2019/trip-service/service"

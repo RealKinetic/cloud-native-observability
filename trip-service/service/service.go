@@ -17,6 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/nats-io/nuid"
+	"github.com/opentracing-contrib/go-stdlib/nethttp"
+	"github.com/opentracing/opentracing-go"
 
 	cars "github.com/realkinetic/cloud-native-meetup-2019/car-service/service"
 	flights "github.com/realkinetic/cloud-native-meetup-2019/flight-service/service"
@@ -111,7 +113,8 @@ type TripService interface {
 }
 
 type dynamoService struct {
-	db *dynamodb.DynamoDB
+	db         *dynamodb.DynamoDB
+	httpClient *http.Client
 }
 
 func NewTripService() (TripService, error) {
@@ -151,7 +154,9 @@ func NewTripService() (TripService, error) {
 		}
 	}
 
-	return &dynamoService{db: db}, nil
+	client := &http.Client{Transport: &nethttp.Transport{}}
+
+	return &dynamoService{db: db, httpClient: client}, nil
 }
 
 func (d *dynamoService) BookTrip(ctx context.Context, r *BookTripRequest) (*TripConfirmation, error) {
@@ -277,10 +282,14 @@ func (d *dynamoService) getBooking(ctx context.Context, url string, object inter
 		return err
 	}
 	req = req.WithContext(ctx)
-	resp, err := http.DefaultClient.Do(req)
+	req, tracer := nethttp.TraceRequest(opentracing.GlobalTracer(), req)
+	defer tracer.Finish()
+
+	resp, err := d.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
+
 	defer resp.Body.Close()
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -315,16 +324,21 @@ func (d *dynamoService) book(ctx context.Context, req interface{}, url string, r
 	if err != nil {
 		panic(err)
 	}
+
 	r, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
 	if err != nil {
 		panic(err)
 	}
 	r.Header.Set("Content-Type", "application/json")
 	r = r.WithContext(ctx)
-	re, err := http.DefaultClient.Do(r)
+	r, tracer := nethttp.TraceRequest(opentracing.GlobalTracer(), r)
+	defer tracer.Finish()
+
+	re, err := d.httpClient.Do(r)
 	if err != nil {
 		return err
 	}
+
 	defer re.Body.Close()
 	data, err = ioutil.ReadAll(re.Body)
 	if err != nil {

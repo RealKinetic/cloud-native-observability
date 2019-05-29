@@ -60,7 +60,8 @@ type dynamoService struct {
 
 func NewHotelService() (HotelService, error) {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{Region: aws.String("us-east-1")},
+		SharedConfigState: session.SharedConfigEnable,
+		Config:            aws.Config{Region: aws.String("us-east-1")},
 	}))
 	db := dynamodb.New(sess)
 

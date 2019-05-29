@@ -16,8 +16,6 @@ import (
 	"github.com/realkinetic/cloud-native-meetup-2019/util"
 )
 
-var tracer opentracing.Tracer
-
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
@@ -28,7 +26,7 @@ func init() {
 	}
 	log.AddHook(hook)
 
-	tracer = util.InitTracer("trip-service", log.StandardLogger())
+	tracer := util.InitTracer("trip-service", log.StandardLogger())
 	opentracing.InitGlobalTracer(tracer)
 }
 
@@ -46,7 +44,8 @@ func main() {
 	s := &server{service: tripService}
 	http.HandleFunc("/booking", s.bookingHandler)
 	log.Infof("Trip service listening on %s...", port)
-	if err := http.ListenAndServe(port, nethttp.Middleware(tracer, http.DefaultServeMux)); err != nil {
+	mux := nethttp.Middleware(opentracing.GlobalTracer(), http.DefaultServeMux)
+	if err := http.ListenAndServe(port, mux); err != nil {
 		panic(err)
 	}
 }

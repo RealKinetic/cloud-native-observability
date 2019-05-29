@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/opentracing-contrib/go-stdlib/nethttp"
+	"github.com/opentracing/opentracing-go"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/realkinetic/cloud-native-meetup-2019/car-service/service"
@@ -23,6 +25,9 @@ func init() {
 		panic(err)
 	}
 	log.AddHook(hook)
+
+	tracer := util.InitTracer("car-service", log.StandardLogger())
+	opentracing.InitGlobalTracer(tracer)
 }
 
 const port = ":8082"
@@ -39,7 +44,8 @@ func main() {
 	s := &server{service: carService}
 	http.HandleFunc("/booking", s.bookingHandler)
 	log.Printf("Car rental service listening on %s...", port)
-	if err := http.ListenAndServe(port, nil); err != nil {
+	mux := nethttp.Middleware(opentracing.GlobalTracer(), http.DefaultServeMux)
+	if err := http.ListenAndServe(port, mux); err != nil {
 		panic(err)
 	}
 }

@@ -8,11 +8,15 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/opentracing-contrib/go-stdlib/nethttp"
+	opentracing "github.com/opentracing/opentracing-go"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/realkinetic/cloud-native-meetup-2019/trip-service/service"
 	"github.com/realkinetic/cloud-native-meetup-2019/util"
 )
+
+var tracer opentracing.Tracer
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
@@ -23,6 +27,9 @@ func init() {
 		panic(err)
 	}
 	log.AddHook(hook)
+
+	tracer = util.InitTracer("trip-service", log.StandardLogger())
+	opentracing.InitGlobalTracer(tracer)
 }
 
 const port = ":8000"
@@ -39,7 +46,7 @@ func main() {
 	s := &server{service: tripService}
 	http.HandleFunc("/booking", s.bookingHandler)
 	log.Infof("Trip service listening on %s...", port)
-	if err := http.ListenAndServe(port, nil); err != nil {
+	if err := http.ListenAndServe(port, nethttp.Middleware(tracer, http.DefaultServeMux)); err != nil {
 		panic(err)
 	}
 }

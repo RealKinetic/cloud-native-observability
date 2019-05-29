@@ -1,0 +1,61 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    run: trip-svc
+  name: trip-svc
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: trip-svc
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        run: trip-svc
+    spec:
+      containers:
+      - image: 421635722870.dkr.ecr.us-east-1.amazonaws.com/realkinetic/trip-service
+        imagePullPolicy: IfNotPresent
+        name: trip-svc
+        env:
+          - name: FLIGHT_SERVICE_URL
+            value: http://flight-svc.default.svc.cluster.local
+          - name: HOTEL_SERVICE_URL
+            value: http://hotel-svc.default.svc.cluster.local
+          - name: CAR_SERVICE_URL
+            value: http://car-svc.default.svc.cluster.local
+        ports:
+        - containerPort: 8000
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: trip-svc
+  name: trip-svc
+  namespace: default
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    run: trip-svc
+  sessionAffinity: None
+  type: LoadBalancer

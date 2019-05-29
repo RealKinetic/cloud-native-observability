@@ -31,11 +31,18 @@ func newLogReporter(log *logrus.Logger) jaeger.Reporter {
 
 func (l *logReporter) Report(span *jaeger.Span) {
 	s := jaeger.BuildZipkinThrift(span)
-	data, err := l.serializer.Write(s)
-	if err != nil {
+	t := thrift.NewTMemoryBuffer()
+	p := thrift.NewTBinaryProtocolTransport(t)
+	if err := p.WriteListBegin(thrift.STRUCT, 1); err != nil {
 		panic(err)
 	}
-	encoded := base64.StdEncoding.EncodeToString(data)
+	if err := s.Write(p); err != nil {
+		panic(err)
+	}
+	if err := p.WriteListEnd(); err != nil {
+		panic(err)
+	}
+	encoded := base64.StdEncoding.EncodeToString(t.Buffer.Bytes())
 	l.log.WithFields(logrus.Fields{
 		"trace": encoded,
 	}).Info("trace")

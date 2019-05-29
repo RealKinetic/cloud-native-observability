@@ -25,7 +25,7 @@ func init() {
 	log.AddHook(hook)
 }
 
-const port = ":80"
+const port = ":8000"
 
 type server struct {
 	service service.TripService

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -59,8 +60,8 @@ type CarRentalConfirmation struct {
 }
 
 type CarRentalService interface {
-	BookCarRental(*BookCarRentalRequest) (*CarRentalConfirmation, error)
-	GetBooking(ref string) (*CarRentalConfirmation, error)
+	BookCarRental(context.Context, *BookCarRentalRequest) (*CarRentalConfirmation, error)
+	GetBooking(ctx context.Context, ref string) (*CarRentalConfirmation, error)
 }
 
 type dynamoService struct {
@@ -108,7 +109,7 @@ func NewCarRentalService() (CarRentalService, error) {
 	return &dynamoService{db: db}, nil
 }
 
-func (d *dynamoService) BookCarRental(r *BookCarRentalRequest) (*CarRentalConfirmation, error) {
+func (d *dynamoService) BookCarRental(ctx context.Context, r *BookCarRentalRequest) (*CarRentalConfirmation, error) {
 	confirmation := &CarRentalConfirmation{Ref: nuid.Next(), CarRental: r}
 	av, err := dynamodbattribute.MarshalMap(confirmation)
 	if err != nil {
@@ -119,13 +120,13 @@ func (d *dynamoService) BookCarRental(r *BookCarRentalRequest) (*CarRentalConfir
 		Item:      av,
 		TableName: aws.String(rentalsTable),
 	}
-	_, err = d.db.PutItem(input)
+	_, err = d.db.PutItemWithContext(ctx, input)
 
 	return confirmation, err
 }
 
-func (d *dynamoService) GetBooking(ref string) (*CarRentalConfirmation, error) {
-	result, err := d.db.GetItem(&dynamodb.GetItemInput{
+func (d *dynamoService) GetBooking(ctx context.Context, ref string) (*CarRentalConfirmation, error) {
+	result, err := d.db.GetItemWithContext(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(rentalsTable),
 		Key: map[string]*dynamodb.AttributeValue{
 			"ref": {

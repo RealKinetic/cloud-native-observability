@@ -10,3 +10,15 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+kube/*.json
+router/*.json
+router/deps
+router/*.zip
+
+.ropeproject
+
+car-service/car-service
+flight-service/flight-service
+hotel-service/hotel-service
+trip-service/trip-service

@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - image: 421635722870.dkr.ecr.us-east-1.amazonaws.com/realkinetic/flight-service
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         name: flight-svc
         ports:
         - containerPort: 8080

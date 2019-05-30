@@ -30,6 +30,8 @@ spec:
             value: "observability-pipeline"
           - name: FLUENT_UID
             value: "0"
+          - name: FLUENTD_SYSTEMD_CONF
+            value: "disable"
         resources:
           limits:
             memory: 200Mi

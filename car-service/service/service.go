@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/nats-io/nuid"
+	"github.com/opentracing-contrib/go-aws-sdk"
 )
 
 var (
@@ -72,6 +73,7 @@ func NewCarRentalService() (CarRentalService, error) {
 		Config:            aws.Config{Region: aws.String("us-east-1")},
 	}))
 	db := dynamodb.New(sess)
+	otaws.AddOTHandlers(db.Client)
 
 	input := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{

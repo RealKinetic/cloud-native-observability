@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/nats-io/nuid"
+	"github.com/opentracing-contrib/go-aws-sdk"
 	"github.com/opentracing-contrib/go-stdlib/nethttp"
 	"github.com/opentracing/opentracing-go"
 
@@ -123,6 +124,7 @@ func NewTripService() (TripService, error) {
 		Config:            aws.Config{Region: aws.String("us-east-1")},
 	}))
 	db := dynamodb.New(sess)
+	otaws.AddOTHandlers(db.Client)
 
 	input := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{
@@ -206,13 +208,13 @@ func (d *dynamoService) BookTrip(ctx context.Context, r *BookTripRequest) (*Trip
 		Item:      av,
 		TableName: aws.String(tripsTable),
 	}
-	_, err = d.db.PutItem(input)
+	_, err = d.db.PutItemWithContext(ctx, input)
 
 	return confirmation, err
 }
 
 func (d *dynamoService) GetBooking(ctx context.Context, ref string) (*TripConfirmation, error) {
-	result, err := d.db.GetItem(&dynamodb.GetItemInput{
+	result, err := d.db.GetItemWithContext(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(tripsTable),
 		Key: map[string]*dynamodb.AttributeValue{
 			"ref": {

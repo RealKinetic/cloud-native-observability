@@ -337,7 +337,7 @@ func (d *dynamoService) book(ctx context.Context, req interface{}, url string, r
 	}
 	r.Header.Set("Content-Type", "application/json")
 	r = r.WithContext(ctx)
-	req, tracer := nethttp.TraceRequest(
+	r, tracer := nethttp.TraceRequest(
 		opentracing.GlobalTracer(),
 		r,
 		nethttp.OperationName("POST "+r.URL.Path),

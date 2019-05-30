@@ -41,10 +41,18 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	s := &server{service: hotelService}
-	http.HandleFunc("/booking", s.bookingHandler)
+	http.HandleFunc("/hotels/booking", s.bookingHandler)
+	mux := nethttp.Middleware(
+		opentracing.GlobalTracer(),
+		http.DefaultServeMux,
+		nethttp.OperationNameFunc(func(r *http.Request) string {
+			return r.Method + " " + r.URL.Path
+		}),
+	)
+
 	log.Infof("Hotel service listening on %s...", port)
-	mux := nethttp.Middleware(opentracing.GlobalTracer(), http.DefaultServeMux)
 	if err := http.ListenAndServe(port, mux); err != nil {
 		panic(err)
 	}

@@ -43,7 +43,7 @@ func main() {
 	}
 
 	s := &server{service: tripService}
-	http.HandleFunc("/booking", s.bookingHandler)
+	http.HandleFunc("/trips/booking", s.bookingHandler)
 	mux := nethttp.Middleware(
 		opentracing.GlobalTracer(),
 		http.DefaultServeMux,

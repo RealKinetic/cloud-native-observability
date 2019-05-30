@@ -262,19 +262,19 @@ func (d *dynamoService) GetBooking(ctx context.Context, ref string) (*TripConfir
 
 func (d *dynamoService) getFlight(ctx context.Context, ref string) (*flights.FlightConfirmation, error) {
 	var confirmation *flights.FlightConfirmation
-	err := d.getBooking(ctx, fmt.Sprintf("%s/booking?ref=%s", flightServiceURL, ref), &confirmation)
+	err := d.getBooking(ctx, fmt.Sprintf("%s/flights/booking?ref=%s", flightServiceURL, ref), &confirmation)
 	return confirmation, err
 }
 
 func (d *dynamoService) getHotel(ctx context.Context, ref string) (*hotels.HotelConfirmation, error) {
 	var confirmation *hotels.HotelConfirmation
-	err := d.getBooking(ctx, fmt.Sprintf("%s/booking?ref=%s", hotelServiceURL, ref), &confirmation)
+	err := d.getBooking(ctx, fmt.Sprintf("%s/hotels/booking?ref=%s", hotelServiceURL, ref), &confirmation)
 	return confirmation, err
 }
 
 func (d *dynamoService) getCar(ctx context.Context, ref string) (*cars.CarRentalConfirmation, error) {
 	var confirmation *cars.CarRentalConfirmation
-	err := d.getBooking(ctx, fmt.Sprintf("%s/booking?ref=%s", carServiceURL, ref), &confirmation)
+	err := d.getBooking(ctx, fmt.Sprintf("%s/cars/booking?ref=%s", carServiceURL, ref), &confirmation)
 	return confirmation, err
 }
 
@@ -309,19 +309,19 @@ func (d *dynamoService) getBooking(ctx context.Context, url string, object inter
 
 func (d *dynamoService) bookFlight(ctx context.Context, r *flights.BookFlightRequest) (*flights.FlightConfirmation, error) {
 	var confirmation *flights.FlightConfirmation
-	err := d.book(ctx, r, flightServiceURL+"/booking", &confirmation)
+	err := d.book(ctx, r, flightServiceURL+"/flights/booking", &confirmation)
 	return confirmation, err
 }
 
 func (d *dynamoService) bookHotel(ctx context.Context, r *hotels.BookHotelRequest) (*hotels.HotelConfirmation, error) {
 	var confirmation *hotels.HotelConfirmation
-	err := d.book(ctx, r, hotelServiceURL+"/booking", &confirmation)
+	err := d.book(ctx, r, hotelServiceURL+"/hotels/booking", &confirmation)
 	return confirmation, err
 }
 
 func (d *dynamoService) bookCar(ctx context.Context, r *cars.BookCarRentalRequest) (*cars.CarRentalConfirmation, error) {
 	var confirmation *cars.CarRentalConfirmation
-	err := d.book(ctx, r, carServiceURL+"/booking", &confirmation)
+	err := d.book(ctx, r, carServiceURL+"/cars/booking", &confirmation)
 	return confirmation, err
 }
 

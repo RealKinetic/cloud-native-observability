@@ -287,7 +287,7 @@ func (d *dynamoService) getBooking(ctx context.Context, url string, object inter
 	req, tracer := nethttp.TraceRequest(
 		opentracing.GlobalTracer(),
 		req,
-		nethttp.OperationName("GET "+req.URL.Path),
+		nethttp.OperationName("getBooking"),
 	)
 	defer tracer.Finish()
 
@@ -340,7 +340,7 @@ func (d *dynamoService) book(ctx context.Context, req interface{}, url string, r
 	r, tracer := nethttp.TraceRequest(
 		opentracing.GlobalTracer(),
 		r,
-		nethttp.OperationName("POST "+r.URL.Path),
+		nethttp.OperationName("book"),
 	)
 	defer tracer.Finish()
 

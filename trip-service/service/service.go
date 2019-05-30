@@ -285,7 +285,6 @@ func (d *dynamoService) getBooking(ctx context.Context, url string, object inter
 	}
 	req = req.WithContext(ctx)
 	req, _ = nethttp.TraceRequest(opentracing.GlobalTracer(), req)
-	//defer tracer.Finish()
 
 	resp, err := d.httpClient.Do(req)
 	if err != nil {
@@ -334,7 +333,6 @@ func (d *dynamoService) book(ctx context.Context, req interface{}, url string, r
 	r.Header.Set("Content-Type", "application/json")
 	r = r.WithContext(ctx)
 	r, _ = nethttp.TraceRequest(opentracing.GlobalTracer(), r)
-	//defer tracer.Finish()
 
 	re, err := d.httpClient.Do(r)
 	if err != nil {

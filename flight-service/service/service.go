@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/nats-io/nuid"
+	"github.com/opentracing-contrib/go-aws-sdk"
 )
 
 var (
@@ -51,8 +53,8 @@ func (b *BookFlightRequest) Validate() error {
 }
 
 type FlightService interface {
-	BookFlight(*BookFlightRequest) (*FlightConfirmation, error)
-	GetBooking(ref string) (*FlightConfirmation, error)
+	BookFlight(context.Context, *BookFlightRequest) (*FlightConfirmation, error)
+	GetBooking(ctx context.Context, ref string) (*FlightConfirmation, error)
 }
 
 type dynamoService struct {
@@ -65,6 +67,7 @@ func NewFlightService() (FlightService, error) {
 		Config:            aws.Config{Region: aws.String("us-east-1")},
 	}))
 	db := dynamodb.New(sess)
+	otaws.AddOTHandlers(db.Client)
 
 	input := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{
@@ -99,7 +102,7 @@ func NewFlightService() (FlightService, error) {
 	return &dynamoService{db: db}, nil
 }
 
-func (d *dynamoService) BookFlight(r *BookFlightRequest) (*FlightConfirmation, error) {
+func (d *dynamoService) BookFlight(ctx context.Context, r *BookFlightRequest) (*FlightConfirmation, error) {
 	confirmation := &FlightConfirmation{Ref: nuid.Next(), Flight: r}
 	av, err := dynamodbattribute.MarshalMap(confirmation)
 	if err != nil {
@@ -110,13 +113,13 @@ func (d *dynamoService) BookFlight(r *BookFlightRequest) (*FlightConfirmation, e
 		Item:      av,
 		TableName: aws.String(flightsTable),
 	}
-	_, err = d.db.PutItem(input)
+	_, err = d.db.PutItemWithContext(ctx, input)
 
 	return confirmation, err
 }
 
-func (d *dynamoService) GetBooking(ref string) (*FlightConfirmation, error) {
-	result, err := d.db.GetItem(&dynamodb.GetItemInput{
+func (d *dynamoService) GetBooking(ctx context.Context, ref string) (*FlightConfirmation, error) {
+	result, err := d.db.GetItemWithContext(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(flightsTable),
 		Key: map[string]*dynamodb.AttributeValue{
 			"ref": {

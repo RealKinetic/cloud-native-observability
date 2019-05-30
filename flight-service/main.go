@@ -61,7 +61,7 @@ func (s *server) bookingHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) getBooking(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	ref := r.URL.Query().Get("ref")
-	confirmation, err := s.service.GetBooking(ref)
+	confirmation, err := s.service.GetBooking(ctx, ref)
 	if err != nil {
 		log.WithContext(ctx).WithFields(log.Fields{
 			"error": err,
@@ -114,7 +114,7 @@ func (s *server) bookFlight(ctx context.Context, w http.ResponseWriter, r *http.
 		return
 	}
 
-	confirmation, err := s.service.BookFlight(&req)
+	confirmation, err := s.service.BookFlight(ctx, &req)
 	if err != nil {
 		log.WithContext(ctx).WithFields(log.Fields{
 			"error": err,

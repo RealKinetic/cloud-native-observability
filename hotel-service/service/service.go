@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/nats-io/nuid"
+	"github.com/opentracing-contrib/go-aws-sdk"
 )
 
 var (
@@ -50,8 +52,8 @@ type HotelConfirmation struct {
 }
 
 type HotelService interface {
-	BookHotel(*BookHotelRequest) (*HotelConfirmation, error)
-	GetBooking(ref string) (*HotelConfirmation, error)
+	BookHotel(context.Context, *BookHotelRequest) (*HotelConfirmation, error)
+	GetBooking(ctx context.Context, ref string) (*HotelConfirmation, error)
 }
 
 type dynamoService struct {
@@ -64,6 +66,7 @@ func NewHotelService() (HotelService, error) {
 		Config:            aws.Config{Region: aws.String("us-east-1")},
 	}))
 	db := dynamodb.New(sess)
+	otaws.AddOTHandlers(db.Client)
 
 	input := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{
@@ -98,7 +101,7 @@ func NewHotelService() (HotelService, error) {
 	return &dynamoService{db: db}, nil
 }
 
-func (d *dynamoService) BookHotel(r *BookHotelRequest) (*HotelConfirmation, error) {
+func (d *dynamoService) BookHotel(ctx context.Context, r *BookHotelRequest) (*HotelConfirmation, error) {
 	confirmation := &HotelConfirmation{Ref: nuid.Next(), Hotel: r}
 	av, err := dynamodbattribute.MarshalMap(confirmation)
 	if err != nil {
@@ -109,13 +112,13 @@ func (d *dynamoService) BookHotel(r *BookHotelRequest) (*HotelConfirmation, erro
 		Item:      av,
 		TableName: aws.String(hotelsTable),
 	}
-	_, err = d.db.PutItem(input)
+	_, err = d.db.PutItemWithContext(ctx, input)
 
 	return confirmation, err
 }
 
-func (d *dynamoService) GetBooking(ref string) (*HotelConfirmation, error) {
-	result, err := d.db.GetItem(&dynamodb.GetItemInput{
+func (d *dynamoService) GetBooking(ctx context.Context, ref string) (*HotelConfirmation, error) {
+	result, err := d.db.GetItemWithContext(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(hotelsTable),
 		Key: map[string]*dynamodb.AttributeValue{
 			"ref": {

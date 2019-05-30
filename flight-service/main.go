@@ -26,7 +26,7 @@ func init() {
 	}
 	log.AddHook(hook)
 
-	tracer := util.InitTracer("car-service", log.StandardLogger())
+	tracer := util.InitTracer("flight-service", log.StandardLogger())
 	opentracing.InitGlobalTracer(tracer)
 }
 

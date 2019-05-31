@@ -18,12 +18,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/nats-io/nuid"
 	"github.com/opentracing-contrib/go-aws-sdk"
-	"github.com/opentracing-contrib/go-stdlib/nethttp"
-	"github.com/opentracing/opentracing-go"
 
 	cars "github.com/realkinetic/cloud-native-meetup-2019/car-service/service"
 	flights "github.com/realkinetic/cloud-native-meetup-2019/flight-service/service"
 	hotels "github.com/realkinetic/cloud-native-meetup-2019/hotel-service/service"
+	"github.com/realkinetic/cloud-native-meetup-2019/util"
 )
 
 const (
@@ -156,9 +155,7 @@ func NewTripService() (TripService, error) {
 		}
 	}
 
-	client := &http.Client{Transport: &nethttp.Transport{}}
-
-	return &dynamoService{db: db, httpClient: client}, nil
+	return &dynamoService{db: db, httpClient: util.NewHTTPClient()}, nil
 }
 
 func (d *dynamoService) BookTrip(ctx context.Context, r *BookTripRequest) (*TripConfirmation, error) {
@@ -278,18 +275,12 @@ func (d *dynamoService) getCar(ctx context.Context, ref string) (*cars.CarRental
 	return confirmation, err
 }
 
-func (d *dynamoService) getBooking(ctx context.Context, url string, object interface{}) error {
+func (d *dynamoService) getBooking(ctx context.Context, url string, returned interface{}) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
 	}
 	req = req.WithContext(ctx)
-	req, tracer := nethttp.TraceRequest(
-		opentracing.GlobalTracer(),
-		req,
-		nethttp.OperationName("getBooking"),
-	)
-	defer tracer.Finish()
 
 	resp, err := d.httpClient.Do(req)
 	if err != nil {
@@ -304,7 +295,7 @@ func (d *dynamoService) getBooking(ctx context.Context, url string, object inter
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("GetBooking request returned status code %d (%s)", resp.StatusCode, data)
 	}
-	return json.Unmarshal(data, &object)
+	return json.Unmarshal(data, &returned)
 }
 
 func (d *dynamoService) bookFlight(ctx context.Context, r *flights.BookFlightRequest) (*flights.FlightConfirmation, error) {
@@ -325,37 +316,31 @@ func (d *dynamoService) bookCar(ctx context.Context, r *cars.BookCarRentalReques
 	return confirmation, err
 }
 
-func (d *dynamoService) book(ctx context.Context, req interface{}, url string, resp interface{}) error {
-	data, err := json.Marshal(req)
+func (d *dynamoService) book(ctx context.Context, payload interface{}, url string, returned interface{}) error {
+	data, err := json.Marshal(payload)
 	if err != nil {
 		panic(err)
 	}
 
-	r, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
 	if err != nil {
 		panic(err)
 	}
-	r.Header.Set("Content-Type", "application/json")
-	r = r.WithContext(ctx)
-	r, tracer := nethttp.TraceRequest(
-		opentracing.GlobalTracer(),
-		r,
-		nethttp.OperationName("book"),
-	)
-	defer tracer.Finish()
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(ctx)
 
-	re, err := d.httpClient.Do(r)
+	resp, err := d.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
 
-	defer re.Body.Close()
-	data, err = ioutil.ReadAll(re.Body)
+	defer resp.Body.Close()
+	data, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-	if re.StatusCode != http.StatusCreated {
-		return fmt.Errorf("%s request returned status code %d (%s)", url, re.StatusCode, data)
+	if resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("%s request returned status code %d (%s)", url, resp.StatusCode, data)
 	}
-	return json.Unmarshal(data, &resp)
+	return json.Unmarshal(data, &returned)
 }

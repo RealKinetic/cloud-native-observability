@@ -9,9 +9,9 @@ import (
 	"github.com/uber/jaeger-client-go/thrift"
 )
 
-// InitTracer returns an instance of Tracer that samples 100% of traces and
+// initTracer returns an instance of Tracer that samples 100% of traces and
 // logs all spans to stdout.
-func InitTracer(service string, l *logrus.Logger) opentracing.Tracer {
+func initTracer(service string, l *logrus.Logger) opentracing.Tracer {
 	tracer, _ := jaeger.NewTracer(
 		service,
 		jaeger.NewConstSampler(true),

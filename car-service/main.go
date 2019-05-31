@@ -6,29 +6,12 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
-	"os"
 
-	"github.com/opentracing-contrib/go-stdlib/nethttp"
-	"github.com/opentracing/opentracing-go"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/realkinetic/cloud-native-meetup-2019/car-service/service"
 	"github.com/realkinetic/cloud-native-meetup-2019/util"
 )
-
-func init() {
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
-	log.SetLevel(log.InfoLevel)
-	hook, err := util.NewContextHook("car-service")
-	if err != nil {
-		panic(err)
-	}
-	log.AddHook(hook)
-
-	tracer := util.InitTracer("car-service", log.StandardLogger())
-	opentracing.InitGlobalTracer(tracer)
-}
 
 const port = ":8082"
 
@@ -37,6 +20,10 @@ type server struct {
 }
 
 func main() {
+	if err := util.Init("car-service"); err != nil {
+		panic(err)
+	}
+
 	carService, err := service.NewCarRentalService()
 	if err != nil {
 		panic(err)
@@ -44,22 +31,16 @@ func main() {
 
 	s := &server{service: carService}
 	http.HandleFunc("/cars/booking", s.bookingHandler)
-	mux := nethttp.Middleware(
-		opentracing.GlobalTracer(),
-		http.DefaultServeMux,
-		nethttp.OperationNameFunc(func(r *http.Request) string {
-			return r.Method + " " + r.URL.Path
-		}),
-	)
+	handler := util.NewContextHandler(http.DefaultServeMux)
 
 	log.Printf("Car rental service listening on %s...", port)
-	if err := http.ListenAndServe(port, mux); err != nil {
+	if err := http.ListenAndServe(port, handler); err != nil {
 		panic(err)
 	}
 }
 
 func (s *server) bookingHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := util.ContextWithRequest(r.Context(), r)
+	ctx := r.Context()
 	switch r.Method {
 	case "GET":
 		s.getBooking(ctx, w, r)
@@ -75,11 +56,11 @@ func (s *server) bookingHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) getBooking(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	ref := r.URL.Query().Get("ref")
+	ctx = util.WithRef(ctx, ref)
 	confirmation, err := s.service.GetBooking(ctx, ref)
 	if err != nil {
 		log.WithContext(ctx).WithFields(log.Fields{
 			"error": err,
-			"ref":   ref,
 		}).Error("Failed to fetch booking")
 		if err == service.ErrNoSuchBooking {
 			http.Error(w, err.Error(), http.StatusNotFound)

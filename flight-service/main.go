@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"io/ioutil"
 	"net/http"
 
@@ -15,12 +16,15 @@ import (
 
 const port = ":8080"
 
+var notrace = flag.Bool("notrace", false, "disable tracing")
+
 type server struct {
 	service service.FlightService
 }
 
 func main() {
-	if err := util.Init("flight-service"); err != nil {
+	flag.Parse()
+	if err := util.Init("flight-service", *notrace); err != nil {
 		panic(err)
 	}
 
@@ -75,9 +79,7 @@ func (s *server) getBooking(ctx context.Context, w http.ResponseWriter, r *http.
 		panic(err)
 	}
 
-	log.WithContext(ctx).WithFields(log.Fields{
-		"ref": ref,
-	}).Info("Fetched booking")
+	log.WithContext(ctx).Info("Fetched booking")
 	w.Write(resp)
 }
 
@@ -125,9 +127,7 @@ func (s *server) bookFlight(ctx context.Context, w http.ResponseWriter, r *http.
 		}).Fatal("Failed to marshal response")
 	}
 
-	log.WithContext(ctx).WithFields(log.Fields{
-		"ref": confirmation.Ref,
-	}).Info("Booked flight")
+	log.WithContext(ctx).Info("Booked flight")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(resp)
 }

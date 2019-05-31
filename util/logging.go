@@ -43,8 +43,8 @@ func (c *ctxValues) fromRequest(r *http.Request) {
 }
 
 // Init initializes logging and tracing for the given service. Call this before
-// using logging or tracing.
-func Init(serviceName string) error {
+// using logging or tracing. The notrace flag will disable tracing.
+func Init(serviceName string, notrace bool) error {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel)
@@ -54,8 +54,10 @@ func Init(serviceName string) error {
 	}
 	log.AddHook(hook)
 
-	tracer := initTracer(serviceName, log.StandardLogger())
-	opentracing.InitGlobalTracer(tracer)
+	if !notrace {
+		tracer := initTracer(serviceName, log.StandardLogger())
+		opentracing.InitGlobalTracer(tracer)
+	}
 	return nil
 }
 

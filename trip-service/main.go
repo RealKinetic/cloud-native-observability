@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"io/ioutil"
 	"net/http"
 
@@ -15,12 +16,15 @@ import (
 
 const port = ":8000"
 
+var notrace = flag.Bool("notrace", false, "disable tracing")
+
 type server struct {
 	service service.TripService
 }
 
 func main() {
-	if err := util.Init("trip-service"); err != nil {
+	flag.Parse()
+	if err := util.Init("trip-service", *notrace); err != nil {
 		panic(err)
 	}
 
@@ -75,34 +79,22 @@ func (s *server) getBooking(ctx context.Context, w http.ResponseWriter, r *http.
 		panic(err)
 	}
 
-	log.WithContext(ctx).WithFields(log.Fields{
-		"ref": ref,
-	}).Info("Fetched booking")
+	log.WithContext(ctx).Info("Fetched booking")
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(resp)
 }
 
 func (s *server) bookTrip(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-	data, err := ioutil.ReadAll(r.Body)
+	booking, err := s.deserializeBookingRequest(r)
 	if err != nil {
 		log.WithContext(ctx).WithFields(log.Fields{
 			"error": err,
-		}).Error("Failed to read request body")
+		}).Error("Failed to deserialize request")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var req service.BookTripRequest
-	if err := json.Unmarshal(data, &req); err != nil {
-		log.WithContext(ctx).WithFields(log.Fields{
-			"error": err,
-		}).Error("Failed to unmarshal request body")
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err := req.Validate(); err != nil {
+	if err := booking.Validate(); err != nil {
 		log.WithContext(ctx).WithFields(log.Fields{
 			"error": err,
 		}).Error("Invalid booking request")
@@ -110,7 +102,7 @@ func (s *server) bookTrip(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	confirmation, err := s.service.BookTrip(ctx, &req)
+	confirmation, err := s.service.BookTrip(ctx, booking)
 	if err != nil {
 		log.WithContext(ctx).WithFields(log.Fields{
 			"error": err,
@@ -126,10 +118,23 @@ func (s *server) bookTrip(ctx context.Context, w http.ResponseWriter, r *http.Re
 		}).Fatal("Failed to marshal response")
 	}
 
-	log.WithContext(ctx).WithFields(log.Fields{
-		"ref": confirmation.Ref,
-	}).Info("Booked trip")
+	log.WithContext(ctx).Info("Booked trip")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(resp)
+}
+
+func (s *server) deserializeBookingRequest(r *http.Request) (*service.BookTripRequest, error) {
+	defer r.Body.Close()
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var req service.BookTripRequest
+	if err := json.Unmarshal(data, &req); err != nil {
+		return nil, err
+	}
+
+	return &req, nil
 }

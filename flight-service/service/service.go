@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"math/rand"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -12,6 +13,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/nats-io/nuid"
 	"github.com/opentracing-contrib/go-aws-sdk"
+	"github.com/opentracing/opentracing-go"
+	tracelog "github.com/opentracing/opentracing-go/log"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -62,6 +66,7 @@ type dynamoService struct {
 }
 
 func NewFlightService() (FlightService, error) {
+	rand.Seed(time.Now().Unix())
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 		Config:            aws.Config{Region: aws.String("us-east-1")},
@@ -131,12 +136,34 @@ func (d *dynamoService) GetBooking(ctx context.Context, ref string) (*FlightConf
 		return nil, err
 	}
 
-	var r *FlightConfirmation
-	if err := dynamodbattribute.UnmarshalMap(result.Item, &r); err != nil {
+	var confirmation *FlightConfirmation
+	if err := dynamodbattribute.UnmarshalMap(result.Item, &confirmation); err != nil {
 		return nil, err
 	}
-	if r.Ref == "" {
+	if confirmation.Ref == "" {
 		return nil, ErrNoSuchBooking
 	}
-	return r, nil
+
+	span, ctx := opentracing.StartSpanFromContext(ctx, "validateFlightReservation")
+	span.LogFields(
+		tracelog.String("ref", confirmation.Ref),
+		tracelog.String("airline", confirmation.Flight.Airline),
+		tracelog.String("flight", confirmation.Flight.FlightNumber),
+	)
+	err = d.validateFlightReservation(ctx, confirmation)
+	span.Finish()
+
+	return confirmation, nil
+}
+
+func (d *dynamoService) validateFlightReservation(ctx context.Context, confirmation *FlightConfirmation) error {
+	// Do some work.
+	sleep := 500*time.Millisecond + time.Duration(rand.Intn(1))*time.Second
+	time.Sleep(sleep)
+	log.WithContext(ctx).WithFields(log.Fields{
+		"airline":    confirmation.Flight.Airline,
+		"flight":     confirmation.Flight.FlightNumber,
+		"passengers": confirmation.Flight.Passengers,
+	}).Infof("Validated flight reservation")
+	return nil
 }

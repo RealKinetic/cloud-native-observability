@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"math/rand"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -12,6 +13,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/nats-io/nuid"
 	"github.com/opentracing-contrib/go-aws-sdk"
+	"github.com/opentracing/opentracing-go"
+	tracelog "github.com/opentracing/opentracing-go/log"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -138,12 +142,39 @@ func (d *dynamoService) GetBooking(ctx context.Context, ref string) (*CarRentalC
 		return nil, err
 	}
 
-	var r *CarRentalConfirmation
-	if err := dynamodbattribute.UnmarshalMap(result.Item, &r); err != nil {
+	var confirmation *CarRentalConfirmation
+	if err := dynamodbattribute.UnmarshalMap(result.Item, &confirmation); err != nil {
 		return nil, err
 	}
-	if r.Ref == "" {
+	if confirmation.Ref == "" {
 		return nil, ErrNoSuchBooking
 	}
-	return r, nil
+
+	span, ctx := opentracing.StartSpanFromContext(ctx, "validateCarReservation")
+	span.LogFields(
+		tracelog.String("ref", confirmation.Ref),
+		tracelog.String("agent", confirmation.CarRental.Agent),
+		tracelog.String("name", confirmation.CarRental.Name),
+		tracelog.String("vehicle_class", confirmation.CarRental.VehicleClass),
+	)
+	err = d.validateCarReservation(ctx, confirmation)
+	span.Finish()
+
+	return confirmation, nil
+}
+
+func (d *dynamoService) validateCarReservation(ctx context.Context, confirmation *CarRentalConfirmation) error {
+	// Do some work.
+	sleep := 500*time.Millisecond + time.Duration(rand.Intn(1))*time.Second
+	time.Sleep(sleep)
+	log.WithContext(ctx).WithFields(log.Fields{
+		"agent":             confirmation.CarRental.Agent,
+		"pick_up":           confirmation.CarRental.PickUp,
+		"pick_up_location":  confirmation.CarRental.PickUpLocation,
+		"drop_off":          confirmation.CarRental.DropOff,
+		"drop_off_location": confirmation.CarRental.DropOffLocation,
+		"name":              confirmation.CarRental.Name,
+		"vehicle_class":     confirmation.CarRental.VehicleClass,
+	}).Infof("Validated flight reservation")
+	return nil
 }

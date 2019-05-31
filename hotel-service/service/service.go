@@ -65,6 +65,7 @@ type dynamoService struct {
 }
 
 func NewHotelService() (HotelService, error) {
+	rand.Seed(time.Now().Unix())
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 		Config:            aws.Config{Region: aws.String("us-east-1")},
@@ -142,21 +143,21 @@ func (d *dynamoService) GetBooking(ctx context.Context, ref string) (*HotelConfi
 		return nil, ErrNoSuchBooking
 	}
 
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validateReservation")
+	span, ctx := opentracing.StartSpanFromContext(ctx, "validateHotelReservation")
 	span.LogFields(
 		tracelog.String("ref", confirmation.Ref),
 		tracelog.String("hotel", confirmation.Hotel.Hotel),
 		tracelog.String("name", confirmation.Hotel.Name),
 	)
-	err = d.validateReservation(ctx, confirmation)
+	err = d.validateHotelReservation(ctx, confirmation)
 	span.Finish()
 
 	return confirmation, err
 }
 
-func (d *dynamoService) validateReservation(ctx context.Context, confirmation *HotelConfirmation) error {
+func (d *dynamoService) validateHotelReservation(ctx context.Context, confirmation *HotelConfirmation) error {
 	// Do some work.
-	n := rand.Intn(4)
+	n := rand.Intn(5) + 1
 	time.Sleep(time.Duration(n) * time.Second)
 	log.WithContext(ctx).WithFields(log.Fields{
 		"hotel":     confirmation.Hotel.Hotel,

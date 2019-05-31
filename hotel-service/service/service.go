@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"math/rand"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -12,6 +13,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/nats-io/nuid"
 	"github.com/opentracing-contrib/go-aws-sdk"
+	"github.com/opentracing/opentracing-go"
+	tracelog "github.com/opentracing/opentracing-go/log"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -130,12 +134,36 @@ func (d *dynamoService) GetBooking(ctx context.Context, ref string) (*HotelConfi
 		return nil, err
 	}
 
-	var r *HotelConfirmation
-	if err := dynamodbattribute.UnmarshalMap(result.Item, &r); err != nil {
+	var confirmation *HotelConfirmation
+	if err := dynamodbattribute.UnmarshalMap(result.Item, &confirmation); err != nil {
 		return nil, err
 	}
-	if r.Ref == "" {
+	if confirmation.Ref == "" {
 		return nil, ErrNoSuchBooking
 	}
-	return r, nil
+
+	span, ctx := opentracing.StartSpanFromContext(ctx, "validateReservation")
+	span.LogFields(
+		tracelog.String("ref", confirmation.Ref),
+		tracelog.String("hotel", confirmation.Hotel.Hotel),
+		tracelog.String("name", confirmation.Hotel.Name),
+	)
+	err = d.validateReservation(ctx, confirmation)
+	span.Finish()
+
+	return confirmation, err
+}
+
+func (d *dynamoService) validateReservation(ctx context.Context, confirmation *HotelConfirmation) error {
+	// Do some work.
+	n := rand.Intn(4)
+	time.Sleep(time.Duration(n) * time.Second)
+	log.WithContext(ctx).WithFields(log.Fields{
+		"hotel":     confirmation.Hotel.Hotel,
+		"check_in":  confirmation.Hotel.CheckIn,
+		"check_out": confirmation.Hotel.CheckOut,
+		"name":      confirmation.Hotel.Name,
+		"guests":    confirmation.Hotel.Guests,
+	}).Infof("Validated hotel reservation")
+	return nil
 }

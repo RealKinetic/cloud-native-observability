@@ -157,7 +157,7 @@ func (d *dynamoService) GetBooking(ctx context.Context, ref string) (*HotelConfi
 
 func (d *dynamoService) validateHotelReservation(ctx context.Context, confirmation *HotelConfirmation) error {
 	// Do some work.
-	n := rand.Intn(5) + 1
+	n := rand.Intn(4) + 1
 	time.Sleep(time.Duration(n) * time.Second)
 	log.WithContext(ctx).WithFields(log.Fields{
 		"hotel":     confirmation.Hotel.Hotel,

@@ -73,6 +73,7 @@ type dynamoService struct {
 }
 
 func NewCarRentalService() (CarRentalService, error) {
+	rand.Seed(time.Now().Unix())
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 		Config:            aws.Config{Region: aws.String("us-east-1")},

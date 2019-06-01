@@ -119,6 +119,7 @@ func (s *server) bookCarRental(ctx context.Context, w http.ResponseWriter, r *ht
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	ctx = util.WithRef(ctx, confirmation.Ref)
 
 	resp, err := json.Marshal(confirmation)
 	if err != nil {

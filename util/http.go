@@ -47,9 +47,9 @@ func (i *instrumentedRoundTripper) RoundTrip(r *http.Request) (*http.Response, e
 	return i.tr.RoundTrip(r)
 }
 
-// NewHTTPClient returns an http.Client that is instrumented for tracing and
-// will propagate context values as request headers.
-func NewHTTPClient() *http.Client {
+// NewInstrumentedHTTPClient returns an http.Client that is instrumented for
+// tracing and will propagate context values as request headers.
+func NewInstrumentedHTTPClient() *http.Client {
 	transport := &nethttp.Transport{}
 	return &http.Client{Transport: &instrumentedRoundTripper{transport}}
 }

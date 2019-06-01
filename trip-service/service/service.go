@@ -155,7 +155,10 @@ func NewTripService() (TripService, error) {
 		}
 	}
 
-	return &dynamoService{db: db, httpClient: util.NewHTTPClient()}, nil
+	return &dynamoService{
+		db:         db,
+		httpClient: util.NewInstrumentedHTTPClient(),
+	}, nil
 }
 
 func (d *dynamoService) BookTrip(ctx context.Context, r *BookTripRequest) (*TripConfirmation, error) {

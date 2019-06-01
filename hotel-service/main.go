@@ -119,6 +119,7 @@ func (s *server) bookHotel(ctx context.Context, w http.ResponseWriter, r *http.R
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	ctx = util.WithRef(ctx, confirmation.Ref)
 
 	resp, err := json.Marshal(confirmation)
 	if err != nil {

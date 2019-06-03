@@ -21,7 +21,7 @@ spec:
         run: hotel-svc
     spec:
       containers:
-      - image: 421635722870.dkr.ecr.us-east-1.amazonaws.com/realkinetic/hotel-service
+      - image: tylertreat/hotel-service
         imagePullPolicy: Always
         name: hotel-svc
         ports:

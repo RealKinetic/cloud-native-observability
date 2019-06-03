@@ -21,7 +21,7 @@ spec:
         run: flight-svc
     spec:
       containers:
-      - image: 421635722870.dkr.ecr.us-east-1.amazonaws.com/realkinetic/flight-service
+      - image: tylertreat/flight-service
         imagePullPolicy: Always
         name: flight-svc
         ports:

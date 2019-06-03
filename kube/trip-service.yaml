@@ -21,7 +21,7 @@ spec:
         run: trip-svc
     spec:
       containers:
-      - image: 421635722870.dkr.ecr.us-east-1.amazonaws.com/realkinetic/trip-service
+      - image: tylertreat/trip-service
         imagePullPolicy: Always
         name: trip-svc
         env:
